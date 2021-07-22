@@ -1,3 +1,4 @@
+  
 #define F_CPU 8000000
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -102,11 +103,13 @@ ISR(TIMER1_COMPA_vect){
 	switch(timerCounter){
 		case 0:
 		hmDataCollect();
+		PORTB |= 0x80;
 		timerCounter++;
 		break;
 		
 		case 1:
 		hmDataCollect();
+		PORTB |= 0x80;
 		timerCounter++;
 		break;
 		
@@ -129,7 +132,13 @@ ISR(TWI_vect){
 		//data has been received, ACK sent
 		recBuffer = TWDR;
 		//USART0_TRANS(recBuffer);
+		if (recBuffer == 0x02){
+			//start burner circuit test
+			PORTB |= (1<<PB4);
+			setupTimer();
+		}
 		TWCR |= (1<<TWINT);
+		
 		break;
 		
 		case 0xA8 :
@@ -142,11 +151,6 @@ ISR(TWI_vect){
 		else if(recBuffer == 0x02){
 			//send acknowledgement of receiving burner circuit test command
 			TWDR = 0x03;
-			if(timerCounter == 0){
-				//start burner circuit test
-				PORTB |= (1<<PB4);
-				setupTimer();
-			}
 			TWCR |= (1<<TWINT);	
 			
 		}
@@ -155,8 +159,6 @@ ISR(TWI_vect){
 		case 0xB8 :
 		//Data transmitted, ACK received
 		
-		while(timerCounter==collectionCount);
-		collectionCount++;
 		switch(i2cTransCounter){
 			
 			case 0:
@@ -193,7 +195,7 @@ ISR(TWI_vect){
 			//sending pre-defined byte signifying end of HM Data
 			TWDR = 0x05;
 			i2cTransCounter = 0;
-			
+			PORTB = 0x10;
 			break;
 			
 		}
