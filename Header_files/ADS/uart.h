@@ -4,6 +4,6 @@
 #include <avr/io.h>
 
 void USART0_INIT(void);
-void USART0_TRANS(uint8_t data)
+void USART0_TRANS(uint8_t data);
 
 #endif
