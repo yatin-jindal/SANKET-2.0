@@ -2,6 +2,7 @@
 #define I2C_H
 
 #include <stdint.h>
+#include <avr/io.h>
 
 #define MASK 0xF8
 #define REPEATED_START_STOP 0xA0
