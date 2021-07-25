@@ -1,6 +1,8 @@
 #include "adc.h"
 
-extern uint8_t hmDataADS[6]
+extern uint8_t hmDataADS[6];
+extern uint16_t ADCtemp;
+
 void adcInit(void){
 	//enabling ADC, setting frequency pre-scaler to 16
 	ADCSRA |= (1<<ADEN);
