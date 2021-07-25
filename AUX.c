@@ -21,7 +21,10 @@ volatile uint8_t i2cRec = 0x00;
 volatile int i2cRecCounter = 0;
 volatile int uartTransCounter = 0;
 volatile uint8_t recBuffer = 0x00;
-volatile int wait= 1;
+volatile int waitHM= 1;
+volatile int waitI2C = 1;
+volatile int reqdHM = 0;
+volatile int HMCount = 0;
 
 void startTimer(void){
 	//selecting clock, enabling CTC mode (Clear Timer on Compare)
@@ -81,16 +84,21 @@ void uartInit(void){
 	//enable receive complete interrupt,transmit complete interrupt, receiver enable, transmitter enable
 	UCSR0B=0xC8;
 }
+void interruptInit(void){
+	EICRB |= (1<<ISC71)|(1<<ISC70);
+	EIMSK |= (1<<INT7);
+}
 int main(void){
-	
+	interruptInit();
 	sei();
 	uartInit();
 	i2cInit();
 	startTimer();
+	
 	opMode=SLEEP;
 	DDRA=0xFF;
 	DDRB = 0xFF;
-	
+	DDRC = 0x00;
 	while(1){
 		switch(opMode){
 			case SLEEP:
@@ -115,7 +123,7 @@ int main(void){
 			i2cStart();
 			i2cRecMode();
 			//wait for ADS to send all data
-			while(wait == 1);
+			while(waitI2C == 1);
 			opMode = PREDEPL_HM;
 			break;
 			
@@ -126,21 +134,20 @@ int main(void){
 			i2cWrite(COMMAND_BURNER_CIRC_CHECK);
 			i2cStop();
 			//Receive HM data from AUX board
-			i2cStart();
-			//Enable acknowledgement of received data
-			//I2C ISR will be storing all data received in HM data array
-			i2cRecCounter = 0;
-			i2cRecMode();
-			TWCR |= (1<<TWEA);
-			while(wait == 1);
-			//_delay_ms(100);
-			i2cStart();
-			//Enable acknowledgement of received data
-			//I2C ISR will be storing all data received in HM data array
-			i2cRecCounter = 0;
-			i2cRecMode();
-			TWCR |= (1<<TWEA);
-			while(wait == 1);
+			reqdHM = 2;
+			while(HMCount<reqdHM){
+				while(waitHM==1);
+				i2cStart();
+				//Enable acknowledgement of received data
+				//I2C ISR will be storing all data received in HM data array
+				i2cRecCounter = 0;
+				i2cRecMode();
+				TWCR |= (1<<TWEA);
+				while(waitI2C==1);
+				HMCount++;
+				waitHM = 1;
+			}
+			while(waitHM==1);
 			//check HM data received
 			//send HM data to computer
 			opMode = DEPL;
@@ -153,6 +160,10 @@ int main(void){
 		}
 	}
 	return 0;
+}
+
+ISR(INT7_vect){
+	waitHM = 0;
 }
 
 ISR(TIMER1_COMPC_vect){
@@ -202,7 +213,7 @@ ISR(TWI_vect){
 		
 		case 0x58:
 		//Data received, NACK returned
-		wait = 0;
+		waitI2C = 0;
 		recBuffer = TWDR;
 		i2cStop();
 		TWCR |= (1<<TWINT);
