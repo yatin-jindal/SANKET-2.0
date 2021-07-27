@@ -10,3 +10,9 @@ void uartInit(void){
 	//enable receive complete interrupt,transmit complete interrupt, receiver enable, transmitter enable
 	UCSR0B=0xC8;
 }
+
+void uart_transmit(uint8_t data)
+{
+	while(!(UCSR0A & 0x20));
+	UDR0=data;
+}
