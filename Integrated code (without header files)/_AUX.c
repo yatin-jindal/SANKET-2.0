@@ -84,6 +84,49 @@ void uartInit(void){
 	//enable receive complete interrupt,transmit complete interrupt, receiver enable, transmitter enable
 	UCSR0B=0xC8;
 }
+
+void uart_transmit(uint8_t data)
+{
+  while(!(UCSR0A & 0x20));
+	UDR0=data;	
+}
+
+void adcInit(void){
+	//enabling ADC, setting frequency pre-scaler to 16
+	ADCSRA = (1<<ADEN)|(1<<ADPS2);
+}
+
+void adcCheck(uint8_t mux, int i, uint8_t idealValue){
+	/*Read the adc value
+	*parameters
+	*mux     analog channel
+	*/
+	//setting external voltage reference, left adjust result
+	ADMUX = 0x20;
+	ADMUX |= mux;
+	//start conversion
+	ADCSRA |= (1<<ADSC);
+	//wait for conversion to finish
+	while(!(ADCSRA & (1<<ADIF)));
+	
+	hmData[i] = ADCH;
+	if(abs(hmData[i]-idealValue) > 0.5) opMode=EMERGENCY;
+	}
+
+void HM_data_check&send(void){
+	hmData[0] = (seconds & 0x00FF);
+	hmData[1] = (seconds>>8);
+	hmData[2] = (Uplink_Rx<<7) | (CC_STATUS<<4) | opMode;   // the different HM data are collected and stored at different places 
+	hmData[3] |= (PINA & 0x0F);                             // here the EN and OC of the current limiters are connected in the 4 LSB of Port A
+	adcCheck(xx,4,ideal1);
+	adcCheck(xx,5,ideal2);
+	adcCheck(xx,6,ideal3);
+  
+  for(int j=0;j<18;j++){
+  	uart_transmit(hmData[j]);
+  }
+}
+
 void interruptInit(void){
 	EICRB |= (1<<ISC71)|(1<<ISC70);
 	EIMSK |= (1<<INT7);
@@ -125,6 +168,7 @@ int main(void){
 			//wait for ADS to send all data
 			while(waitI2C == 1);
 			opMode = PREDEPL_HM;
+			uart_transmit(0x55);
 			break;
 			
 			case PREDEPL_HM:
@@ -150,6 +194,7 @@ int main(void){
 			while(waitHM==1);
 			//check HM data received
 			//send HM data to computer
+			HM_data_check&send();
 			opMode = DEPL;
 			break;
 			
