@@ -11,10 +11,12 @@
 #include "i2c.h"
 #include "uart.h"
 #include "interrupts.h"
+#include "adc.h"
+#include "hmdata.h"
 
 volatile uint8_t hmData[18];
 volatile uint8_t opMode;
-volatile int timeCounter1;
+volatile uint16_t timeCounter1;
 volatile uint8_t i2cStatus = 0x00;
 volatile uint8_t i2cRec = 0x00;
 volatile int i2cRecCounter = 0;
@@ -24,7 +26,8 @@ volatile int waitHM= 1;
 volatile int waitI2C = 1;
 volatile int reqdHM = 0;
 volatile int HMCount = 0;
-
+volatile uint8_t Uplink_Rx;
+volatile uint8_t CC_status;
 
 int main(void){
 	interruptInit();
@@ -63,6 +66,7 @@ int main(void){
 			//wait for ADS to send all data
 			while(waitI2C == 1);
 			opMode = PREDEPL_HM;
+			uart_transmit(0x55);
 			break;
 			
 			case PREDEPL_HM:
@@ -88,6 +92,7 @@ int main(void){
 			while(waitHM==1);
 			//check HM data received
 			//send HM data to computer
+			HM_data_check_send();
 			opMode = DEPL;
 			break;
 			
