@@ -137,6 +137,7 @@ int main(void){
 	uartInit();
 	i2cInit();
 	startTimer();
+	adcInit();
 	
 	opMode=SLEEP;
 	DDRA=0xFF;
